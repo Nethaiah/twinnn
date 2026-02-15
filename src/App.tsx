@@ -1,5 +1,5 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Environment, OrbitControls } from "@react-three/drei";
+import { Environment, OrbitControls, useCursor } from "@react-three/drei";
 import {
   Suspense,
   useCallback,
@@ -17,6 +17,7 @@ import { Table } from "./models/table";
 import { PictureFrame } from "./models/pictureFrame";
 import { Fireworks } from "./components/Fireworks";
 import { BirthdayCard } from "./components/BirthdayCard";
+import { CardOverlay } from "./components/CardOverlay";
 
 import "./App.css";
 
@@ -36,6 +37,7 @@ type AnimatedSceneProps = {
   cards: ReadonlyArray<BirthdayCardConfig>;
   activeCardId: string | null;
   onToggleCard: (id: string) => void;
+  onShowOverlay: () => void;
 };
 
 const CAKE_START_Y = 10;
@@ -77,14 +79,18 @@ const BACKGROUND_FADE_START = Math.max(
 );
 
 const TYPED_LINES = [
-  "> tina",
+  "> Hello, Ate Bianca",
   "...",
-  "> today is your birthday",
+  "> Happy Birthday!",
   "...",
-  "> so i made you this computer program",
+  "> I just want to say...",
+  "> Please enjoy your special day.",
+  "> Wishing you all the best and a very good future.",
   "...",
-  "٩(◕‿◕)۶ ٩(◕‿◕)۶ ٩(◕‿◕)۶"
+  "> Just a simple message for you.",
+  "> Happy Birthdayyyyyy!!! ٩(◕‿◕)۶ ٩(◕‿◕)۶ ٩(◕‿◕)۶"
 ];
+
 const TYPED_CHAR_DELAY = 100;
 const POST_TYPING_SCENE_DELAY = 1000;
 const CURSOR_BLINK_INTERVAL = 480;
@@ -99,11 +105,51 @@ type BirthdayCardConfig = {
 const BIRTHDAY_CARDS: ReadonlyArray<BirthdayCardConfig> = [
   {
     id: "confetti",
-    image: "/card.png",
+    image: "/letter_five.png",
     position: [1, 0.081, -2],
     rotation: [-Math.PI / 2 , 0, Math.PI / 3],
   }
 ];
+
+import { useTexture } from "@react-three/drei";
+
+const CARD_WIDTH = 1;
+const CARD_HEIGHT = 0.75;
+
+function CardStackPlaceholder({ position, rotation, onClick }: { position: [number, number, number], rotation: [number, number, number], onClick: () => void }) {
+    const [hovered, setHovered] = useState(false);
+    useCursor(hovered, "pointer", "auto");
+    const texture = useTexture("/letter_one.png");
+    
+    return (
+        <group 
+            position={position} 
+            rotation={rotation} 
+            onClick={(e) => { e.stopPropagation(); onClick(); }}
+            onPointerOver={() => setHovered(true)}
+            onPointerOut={() => setHovered(false)}
+        >
+             {/* Bottom cards in stack */}
+            <mesh position={[0, 0.005, 0]} rotation={[0, 0, 0.05]} castShadow receiveShadow>
+                 <boxGeometry args={[CARD_WIDTH, CARD_HEIGHT, 0.01]} />
+                 <meshStandardMaterial color="#fcfcfc" />
+            </mesh>
+            <mesh position={[0.02, 0.015, 0.02]} rotation={[0, 0, -0.02]} castShadow receiveShadow>
+                 <boxGeometry args={[CARD_WIDTH, CARD_HEIGHT, 0.01]} />
+                 <meshStandardMaterial color="#fcfcfc" />
+            </mesh>
+             {/* Top card with image */}
+             <mesh position={[0, 0.025, 0]} rotation={[0, 0, 0]} castShadow receiveShadow>
+                 <boxGeometry args={[CARD_WIDTH, CARD_HEIGHT, 0.01]} />
+                 <meshStandardMaterial 
+                    map={texture} 
+                    roughness={0.35}
+                    metalness={0.05}
+                 />
+            </mesh>
+        </group>
+    );
+}
 
 function AnimatedScene({
   isPlaying,
@@ -114,6 +160,7 @@ function AnimatedScene({
   cards,
   activeCardId,
   onToggleCard,
+  onShowOverlay
 }: AnimatedSceneProps) {
   const cakeGroup = useRef<Group>(null);
   const tableGroup = useRef<Group>(null);
@@ -289,17 +336,29 @@ function AnimatedScene({
           rotation={[0, 4.2, 0]}
           scale={0.75}
         />
-        {cards.map((card) => (
-          <BirthdayCard
-            key={card.id}
-            id={card.id}
-            image={card.image}
-            tablePosition={card.position}
-            tableRotation={card.rotation}
-            isActive={activeCardId === card.id}
-            onToggle={onToggleCard}
-          />
-        ))}
+        {cards.map((card) => {
+          if (card.id === "confetti") {
+             return (
+               <CardStackPlaceholder
+                 key={card.id}
+                 position={card.position}
+                 rotation={card.rotation}
+                 onClick={onShowOverlay}
+               />
+             );
+          }
+          return (
+            <BirthdayCard
+              key={card.id}
+              id={card.id}
+              image={card.image}
+              tablePosition={card.position}
+              tableRotation={card.rotation}
+              isActive={activeCardId === card.id}
+              onToggle={onToggleCard}
+            />
+          );
+        })}
       </group>
       <group ref={cakeGroup}>
         <Cake />
@@ -378,10 +437,11 @@ export default function App() {
   const [isCandleLit, setIsCandleLit] = useState(true);
   const [fireworksActive, setFireworksActive] = useState(false);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
+  const [showCardOverlay, setShowCardOverlay] = useState(false);
   const backgroundAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    const audio = new Audio("/music.mp3");
+    const audio = new Audio("/Paragraphs.mp3");
     audio.loop = true;
     audio.preload = "auto";
     backgroundAudioRef.current = audio;
@@ -399,7 +459,6 @@ export default function App() {
     if (!audio.paused) {
       return;
     }
-    audio.currentTime = 0;
     void audio.play().catch(() => {
       // ignore play errors (browser might block)
     });
@@ -515,6 +574,7 @@ export default function App() {
 
   return (
     <div className="App">
+      <CardOverlay isOpen={showCardOverlay} onClose={() => setShowCardOverlay(false)} />
       <div
         className="background-overlay"
         style={{ opacity: backgroundOpacity }}
@@ -558,6 +618,7 @@ export default function App() {
             cards={BIRTHDAY_CARDS}
             activeCardId={activeCardId}
             onToggleCard={handleCardToggle}
+            onShowOverlay={() => setShowCardOverlay(true)}
           />
           <ambientLight intensity={(1 - environmentProgress) * 0.8} />
           <directionalLight intensity={0.5} position={[2, 10, 0]} color={[1, 0.9, 0.95]}/>
