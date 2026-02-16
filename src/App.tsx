@@ -42,6 +42,8 @@ type AnimatedSceneProps = {
   onShowOverlay: () => void;
   activeFrameId: string | null;
   onToggleFrame: (id: string) => void;
+  activeBouquetId: string | null;
+  onToggleBouquet: (id: string) => void;
   onDragChange: (isDragging: boolean) => void;
 };
 
@@ -174,6 +176,8 @@ function AnimatedScene({
   onShowOverlay,
   activeFrameId,
   onToggleFrame,
+  activeBouquetId,
+  onToggleBouquet,
   onDragChange,
 }: AnimatedSceneProps) {
   const cakeGroup = useRef<Group>(null);
@@ -367,9 +371,13 @@ function AnimatedScene({
           onDragChange={onDragChange}
         />
         <Bouquet 
-          position={[-2, 0.735, -0.7]} 
-          scale={5} 
-          rotation={[1.2, Math.PI / 2, 0]}
+          bouquetId="bouquet1"
+          tablePosition={[-2, 0.735, -0.7]}
+          tableRotation={[1.2, Math.PI / 2, 0]}
+          scale={5}
+          isActive={activeBouquetId === "bouquet1"}
+          onToggle={onToggleBouquet}
+          onDragChange={onDragChange}
         />
         {cards.map((card) => {
           if (card.id === "confetti") {
@@ -480,6 +488,7 @@ export default function App() {
   const [fireworksActive, setFireworksActive] = useState(false);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const [activeFrameId, setActiveFrameId] = useState<string | null>(null);
+  const [activeBouquetId, setActiveBouquetId] = useState<string | null>(null);
   const [showCardOverlay, setShowCardOverlay] = useState(false);
   const [isDraggingFrame, setIsDraggingFrame] = useState(false);
   const backgroundAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -602,10 +611,20 @@ export default function App() {
 
   const handleCardToggle = useCallback((id: string) => {
     setActiveCardId((current) => (current === id ? null : id));
+    setActiveFrameId(null);
+    setActiveBouquetId(null);
   }, []);
 
   const handleFrameToggle = useCallback((id: string) => {
     setActiveFrameId((current) => (current === id ? null : id));
+    setActiveCardId(null);
+    setActiveBouquetId(null);
+  }, []);
+
+  const handleBouquetToggle = useCallback((id: string) => {
+    setActiveBouquetId((current) => (current === id ? null : id));
+    setActiveFrameId(null);
+    setActiveCardId(null);
   }, []);
 
   useEffect(() => {
@@ -672,6 +691,9 @@ export default function App() {
           if (activeFrameId) {
             handleFrameToggle(activeFrameId);
           }
+          if (activeBouquetId) {
+            handleBouquetToggle(activeBouquetId);
+          }
         }}
       >
         <Suspense fallback={null}>
@@ -687,6 +709,8 @@ export default function App() {
             onShowOverlay={() => setShowCardOverlay(true)}
             activeFrameId={activeFrameId}
             onToggleFrame={handleFrameToggle}
+            activeBouquetId={activeBouquetId}
+            onToggleBouquet={handleBouquetToggle}
             onDragChange={setIsDraggingFrame}
           />
           <ambientLight intensity={(1 - environmentProgress) * 0.8} />
@@ -702,7 +726,7 @@ export default function App() {
           <EnvironmentBackgroundController intensity={0.05 * environmentProgress} />
           <Fireworks isActive={fireworksActive} origin={[-10, 6, 0]} />
           <FallingSparkles isActive={fireworksActive} />
-          <ConfiguredOrbitControls enabled={!isDraggingFrame && !activeFrameId} />
+          <ConfiguredOrbitControls enabled={!isDraggingFrame && !activeFrameId && !activeBouquetId} />
         </Suspense>
       </Canvas>
     </div>
