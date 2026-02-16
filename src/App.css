@@ -40,8 +40,8 @@ canvas {
   transition: opacity 200ms linear;
   pointer-events: none;
   display: flex;
-  align-items: flex-start;
-  padding-top: 2rem;
+  align-items: center;
+  justify-content: flex-start;
   color: #ffffff;
   text-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
 }
@@ -90,4 +90,33 @@ canvas {
   opacity: 0.85;
   pointer-events: none;
   z-index: 3;
+}
+
+.start-hint {
+  position: absolute;
+  bottom: 40%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: "Courier New", Courier, monospace;
+  letter-spacing: 3px;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+  z-index: 4;
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    opacity: 0.4;
+    text-shadow: 0 0 6px rgba(255, 255, 255, 0.15);
+  }
+
+  50% {
+    opacity: 1;
+    text-shadow: 0 0 16px rgba(255, 255, 255, 0.4);
+  }
 }

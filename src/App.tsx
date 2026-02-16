@@ -15,6 +15,7 @@ import { Candle } from "./models/candle";
 import { Cake } from "./models/cake";
 import { Table } from "./models/table";
 import { PictureFrame } from "./models/pictureFrame";
+import { Bouquet } from "./models/bouquet";
 import { Fireworks } from "./components/Fireworks";
 import { FallingSparkles } from "./components/FallingSparkles";
 import { BirthdayCard } from "./components/BirthdayCard";
@@ -97,7 +98,6 @@ const TYPED_LINES = [
 
 const TYPED_CHAR_DELAY = 100;
 const POST_TYPING_SCENE_DELAY = 1000;
-const CURSOR_BLINK_INTERVAL = 480;
 
 type BirthdayCardConfig = {
   id: string;
@@ -366,6 +366,11 @@ function AnimatedScene({
           onToggle={onToggleFrame}
           onDragChange={onDragChange}
         />
+        <Bouquet 
+          position={[-2, 0.735, -0.7]} 
+          scale={5} 
+          rotation={[1.2, Math.PI / 2, 0]}
+        />
         {cards.map((card) => {
           if (card.id === "confetti") {
              return (
@@ -469,7 +474,7 @@ export default function App() {
   const [currentLineIndex, setCurrentLineIndex] = useState(0);
   const [currentCharIndex, setCurrentCharIndex] = useState(0);
   const [sceneStarted, setSceneStarted] = useState(false);
-  const [cursorVisible, setCursorVisible] = useState(true);
+
   const [hasAnimationCompleted, setHasAnimationCompleted] = useState(false);
   const [isCandleLit, setIsCandleLit] = useState(true);
   const [fireworksActive, setFireworksActive] = useState(false);
@@ -521,13 +526,7 @@ export default function App() {
     });
   }, [currentCharIndex, currentLineIndex, typingComplete]);
 
-  const cursorLineIndex = typingComplete
-    ? Math.max(typedLines.length - 1, 0)
-    : currentLineIndex;
-  const cursorTargetIndex = Math.max(
-    Math.min(cursorLineIndex, typedLines.length - 1),
-    0
-  );
+
 
   useEffect(() => {
     if (!hasStarted) {
@@ -578,12 +577,7 @@ export default function App() {
     sceneStarted,
   ]);
 
-  useEffect(() => {
-    const handle = window.setInterval(() => {
-      setCursorVisible((prev) => !prev);
-    }, CURSOR_BLINK_INTERVAL);
-    return () => window.clearInterval(handle);
-  }, []);
+
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -654,24 +648,16 @@ export default function App() {
         style={{ opacity: backgroundOpacity }}
       >
         <div className="typed-text">
-          {typedLines.map((line, index) => {
-            const showCursor =
-              cursorVisible &&
-              index === cursorTargetIndex &&
-              (!typingComplete || !sceneStarted);
-            return (
-              <span className="typed-line" key={`typed-line-${index}`}>
-                {line || "\u00a0"}
-                {showCursor && (
-                  <span aria-hidden="true" className="typed-cursor">
-                    _
-                  </span>
-                )}
-              </span>
-            );
-          })}
+          {typedLines.map((line, index) => (
+            <span className="typed-line" key={`typed-line-${index}`}>
+              {line || "\u00a0"}
+            </span>
+          ))}
         </div>
       </div>
+      {!hasStarted && (
+        <div className="start-hint">[ Press Space to Start ]</div>
+      )}
       {hasAnimationCompleted && isCandleLit && (
         <div className="hint-overlay">[ Press space to blow out the candle ]</div>
       )}
