@@ -16,6 +16,7 @@ import { Cake } from "./models/cake";
 import { Table } from "./models/table";
 import { PictureFrame } from "./models/pictureFrame";
 import { Fireworks } from "./components/Fireworks";
+import { FallingSparkles } from "./components/FallingSparkles";
 import { BirthdayCard } from "./components/BirthdayCard";
 import { CardOverlay } from "./components/CardOverlay";
 
@@ -114,11 +115,11 @@ const BIRTHDAY_CARDS: ReadonlyArray<BirthdayCardConfig> = [
   }
 ];
 
-const FRAME_AUDIO_MAPPING: Record<string, string> = {
-  "frame1": "/Colbie Caillat.mp3",
-  "frame2": "/Prettiest To Me.mp3",
-  "frame3": "/Gwiyomi.mp3",
-  "frame4": "/Aphrodite.mp3"
+const FRAME_AUDIO_MAPPING: Record<string, { src: string; startAt: number }> = {
+  "frame1": { src: "/Colbie Caillat.mp3", startAt: 6 },
+  "frame2": { src: "/Prettiest To Me.mp3", startAt: 5 },
+  "frame3": { src: "/Gwiyomi.mp3", startAt: 6 },
+  "frame4": { src: "/Aphrodite.mp3", startAt: 4 }
 };
 
 import { useTexture } from "@react-three/drei";
@@ -627,9 +628,10 @@ export default function App() {
         bgAudio.pause();
       }
       
-      const audioSrc = FRAME_AUDIO_MAPPING[activeFrameId];
-      if (audioSrc) {
-        frameAudio.src = audioSrc;
+      const audioConfig = FRAME_AUDIO_MAPPING[activeFrameId];
+      if (audioConfig) {
+        frameAudio.src = audioConfig.src;
+        frameAudio.currentTime = audioConfig.startAt;
         frameAudio.play().catch(() => {});
       }
     } else {
@@ -671,7 +673,7 @@ export default function App() {
         </div>
       </div>
       {hasAnimationCompleted && isCandleLit && (
-        <div className="hint-overlay">press space to blow out the candle</div>
+        <div className="hint-overlay">[ Press space to blow out the candle ]</div>
       )}
       {/* Background dismiss is handled via onPointerMissed on the Canvas */}
       <Canvas
@@ -712,7 +714,8 @@ export default function App() {
             backgroundIntensity={0.05 * environmentProgress}
           />
           <EnvironmentBackgroundController intensity={0.05 * environmentProgress} />
-          <Fireworks isActive={fireworksActive} origin={[0, 10, 0]} />
+          <Fireworks isActive={fireworksActive} origin={[-10, 6, 0]} />
+          <FallingSparkles isActive={fireworksActive} />
           <ConfiguredOrbitControls enabled={!isDraggingFrame && !activeFrameId} />
         </Suspense>
       </Canvas>
