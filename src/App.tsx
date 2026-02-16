@@ -38,6 +38,9 @@ type AnimatedSceneProps = {
   activeCardId: string | null;
   onToggleCard: (id: string) => void;
   onShowOverlay: () => void;
+  activeFrameId: string | null;
+  onToggleFrame: (id: string) => void;
+  onDragChange: (isDragging: boolean) => void;
 };
 
 const CAKE_START_Y = 10;
@@ -111,6 +114,13 @@ const BIRTHDAY_CARDS: ReadonlyArray<BirthdayCardConfig> = [
   }
 ];
 
+const FRAME_AUDIO_MAPPING: Record<string, string> = {
+  "frame1": "/Colbie Caillat.mp3",
+  "frame2": "/Prettiest To Me.mp3",
+  "frame3": "/Gwiyomi.mp3",
+  "frame4": "/Aphrodite.mp3"
+};
+
 import { useTexture } from "@react-three/drei";
 
 const CARD_WIDTH = 1;
@@ -160,7 +170,10 @@ function AnimatedScene({
   cards,
   activeCardId,
   onToggleCard,
-  onShowOverlay
+  onShowOverlay,
+  activeFrameId,
+  onToggleFrame,
+  onDragChange,
 }: AnimatedSceneProps) {
   const cakeGroup = useRef<Group>(null);
   const tableGroup = useRef<Group>(null);
@@ -313,28 +326,44 @@ function AnimatedScene({
       <group ref={tableGroup}>
         <Table />
         <PictureFrame
+          frameId="frame2"
           image="/frame2.jpg"
-          position={[0, 0.735, 3]}
-          rotation={[0, 5.6, 0]}
+          tablePosition={[0, 0.735, 3]}
+          tableRotation={[0, 5.6, 0]}
           scale={0.75}
+          isActive={activeFrameId === "frame2"}
+          onToggle={onToggleFrame}
+          onDragChange={onDragChange}
         />
         <PictureFrame
+          frameId="frame3"
           image="/frame3.jpg"
-          position={[0, 0.735, -3]}
-          rotation={[0, 4.0, 0]}
+          tablePosition={[0, 0.735, -3]}
+          tableRotation={[0, 4.0, 0]}
           scale={0.75}
+          isActive={activeFrameId === "frame3"}
+          onToggle={onToggleFrame}
+          onDragChange={onDragChange}
         />
         <PictureFrame
+          frameId="frame4"
           image="/frame4.jpg"
-          position={[-1.5, 0.735, 2.5]}
-          rotation={[0, 5.4, 0]}
+          tablePosition={[-1.5, 0.735, 2.5]}
+          tableRotation={[0, 5.4, 0]}
           scale={0.75}
+          isActive={activeFrameId === "frame4"}
+          onToggle={onToggleFrame}
+          onDragChange={onDragChange}
         />
         <PictureFrame
+          frameId="frame1"
           image="/frame1.jpg"
-          position={[-1.5, 0.735, -2.5]}
-          rotation={[0, 4.2, 0]}
+          tablePosition={[-1.5, 0.735, -2.5]}
+          tableRotation={[0, 4.2, 0]}
           scale={0.75}
+          isActive={activeFrameId === "frame1"}
+          onToggle={onToggleFrame}
+          onDragChange={onDragChange}
         />
         {cards.map((card) => {
           if (card.id === "confetti") {
@@ -370,7 +399,13 @@ function AnimatedScene({
   );
 }
 
-function ConfiguredOrbitControls() {
+
+
+type ConfiguredOrbitControlsProps = {
+  enabled?: boolean;
+};
+
+function ConfiguredOrbitControls({ enabled = true }: ConfiguredOrbitControlsProps) {
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const camera = useThree((state) => state.camera);
 
@@ -394,6 +429,7 @@ function ConfiguredOrbitControls() {
   return (
     <OrbitControls
       ref={controlsRef}
+      enabled={enabled}
       enableDamping
       dampingFactor={0.05}
       minDistance={ORBIT_MIN_DISTANCE}
@@ -437,8 +473,11 @@ export default function App() {
   const [isCandleLit, setIsCandleLit] = useState(true);
   const [fireworksActive, setFireworksActive] = useState(false);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
+  const [activeFrameId, setActiveFrameId] = useState<string | null>(null);
   const [showCardOverlay, setShowCardOverlay] = useState(false);
+  const [isDraggingFrame, setIsDraggingFrame] = useState(false);
   const backgroundAudioRef = useRef<HTMLAudioElement | null>(null);
+  const frameAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     const audio = new Audio("/Paragraphs.mp3");
@@ -570,6 +609,39 @@ export default function App() {
     setActiveCardId((current) => (current === id ? null : id));
   }, []);
 
+  const handleFrameToggle = useCallback((id: string) => {
+    setActiveFrameId((current) => (current === id ? null : id));
+  }, []);
+
+  useEffect(() => {
+    if (!frameAudioRef.current) {
+      frameAudioRef.current = new Audio();
+      frameAudioRef.current.loop = true;
+    }
+    
+    const bgAudio = backgroundAudioRef.current;
+    const frameAudio = frameAudioRef.current;
+
+    if (activeFrameId) {
+      if (bgAudio) {
+        bgAudio.pause();
+      }
+      
+      const audioSrc = FRAME_AUDIO_MAPPING[activeFrameId];
+      if (audioSrc) {
+        frameAudio.src = audioSrc;
+        frameAudio.play().catch(() => {});
+      }
+    } else {
+      frameAudio.pause();
+      frameAudio.currentTime = 0;
+      
+      if (bgAudio && hasStarted && !activeCardId) {
+         bgAudio.play().catch(() => {});
+      }
+    }
+  }, [activeFrameId, hasStarted, activeCardId]);
+
   const isScenePlaying = hasStarted && sceneStarted;
 
   return (
@@ -601,11 +673,17 @@ export default function App() {
       {hasAnimationCompleted && isCandleLit && (
         <div className="hint-overlay">press space to blow out the candle</div>
       )}
+      {/* Background dismiss is handled via onPointerMissed on the Canvas */}
       <Canvas
         gl={{ alpha: true }}
         style={{ background: "transparent" }}
         onCreated={({ gl }) => {
           gl.setClearColor("#000000", 0);
+        }}
+        onPointerMissed={() => {
+          if (activeFrameId) {
+            handleFrameToggle(activeFrameId);
+          }
         }}
       >
         <Suspense fallback={null}>
@@ -619,6 +697,9 @@ export default function App() {
             activeCardId={activeCardId}
             onToggleCard={handleCardToggle}
             onShowOverlay={() => setShowCardOverlay(true)}
+            activeFrameId={activeFrameId}
+            onToggleFrame={handleFrameToggle}
+            onDragChange={setIsDraggingFrame}
           />
           <ambientLight intensity={(1 - environmentProgress) * 0.8} />
           <directionalLight intensity={0.5} position={[2, 10, 0]} color={[1, 0.9, 0.95]}/>
@@ -632,7 +713,7 @@ export default function App() {
           />
           <EnvironmentBackgroundController intensity={0.05 * environmentProgress} />
           <Fireworks isActive={fireworksActive} origin={[0, 10, 0]} />
-          <ConfiguredOrbitControls />
+          <ConfiguredOrbitControls enabled={!isDraggingFrame && !activeFrameId} />
         </Suspense>
       </Canvas>
     </div>
